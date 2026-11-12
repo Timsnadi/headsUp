@@ -33,6 +33,9 @@
   --transition-medium: 220ms ease;
 
   --nav-height: 72px;
+  --dock-height: 76px;
+  --dock-blur: 24px;
+  --dock-saturation: 180%;
   --touch-target: 44px;
   --focus-outline-width: 2px;
   --safe-top: env(safe-area-inset-top, 0px);

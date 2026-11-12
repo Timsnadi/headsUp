@@ -1,11 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="headsUp app icon">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="headsUp logo">
   <defs>
-    <linearGradient id="g" x1="0%" x2="100%" y1="0%" y2="100%">
-      <stop offset="0%" stop-color="#7aa8ff" />
-      <stop offset="100%" stop-color="#1d4ed8" />
+    <linearGradient id="brand" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#df4652"/>
+      <stop offset="100%" stop-color="#a71928"/>
     </linearGradient>
   </defs>
-  <rect width="64" height="64" rx="18" fill="url(#g)"/>
-  <path d="M18 22h28v6H18zm0 9h28v6H18zm0 9h18v6H18z" fill="#fff" opacity="0.92"/>
-  <path d="M44 17h4v30h-4z" fill="#dbeafe"/>
+  <rect width="512" height="512" rx="136" fill="url(#brand)"/>
+  <path d="M154 365V151m2 122c0-48 30-78 76-78s76 30 76 78v92" fill="none" stroke="#fff" stroke-width="48" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m284 191 88-88m-47 0h47v47" fill="none" stroke="#f6d7d9" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
