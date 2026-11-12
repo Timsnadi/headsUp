@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="headsUp app icon">
+  <defs>
+    <linearGradient id="g" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#7aa8ff" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="18" fill="url(#g)"/>
+  <path d="M18 22h28v6H18zm0 9h28v6H18zm0 9h18v6H18z" fill="#fff" opacity="0.92"/>
+  <path d="M44 17h4v30h-4z" fill="#dbeafe"/>
+</svg>
