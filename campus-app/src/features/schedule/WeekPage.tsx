@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import {
   formatMeetingTime,
   formatScheduleDate,
@@ -7,6 +7,15 @@ import {
 } from './scheduleUtils'
 import { useTodayDate } from './useTodayDate'
 import { useScheduleCourses } from './useScheduleCourses'
+import { assignmentRepository, examRepository } from '../../db/repositories'
+import type { Assignment, Exam } from '../../types'
+
+function localDateKey(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 export function WeekPage() {
   const [weekOffset, setWeekOffset] = useState(0)
@@ -18,6 +27,16 @@ export function WeekPage() {
     day: 'numeric',
     year: 'numeric',
   })}`
+  const [assignments, setAssignments] = useState<Assignment[]>([])
+  const [exams, setExams] = useState<Exam[]>([])
+
+  useEffect(() => {
+    void Promise.all([assignmentRepository.list(), examRepository.list()])
+      .then(([savedAssignments, savedExams]) => {
+        setAssignments(savedAssignments)
+        setExams(savedExams)
+      })
+  }, [])
 
   return (
     <section className="page-panel">
@@ -57,6 +76,11 @@ export function WeekPage() {
           {dates.map((date) => {
             const dayCourses = getCoursesForDate(courses, date)
             const isToday = date.toDateString() === today.toDateString()
+            const dateKey = localDateKey(date)
+            const dayAssignments = assignments.filter((item) =>
+              item.status !== 'done' && localDateKey(new Date(item.dueDate)) === dateKey,
+            )
+            const dayExams = exams.filter((item) => item.date === dateKey)
 
             return (
               <article className={isToday ? 'week-card today-card' : 'week-card'} key={date.toISOString()}>
@@ -81,6 +105,12 @@ export function WeekPage() {
                 ) : (
                   <p className="week-no-classes">Nothing scheduled</p>
                 )}
+                {dayExams.map((exam) => (
+                  <div className="week-extra exam-extra" key={exam.id}><strong>Exam: {exam.title}</strong><span>{exam.time}</span></div>
+                ))}
+                {dayAssignments.map((assignment) => (
+                  <div className="week-extra assignment-extra" key={assignment.id}><strong>{assignment.title}</strong><span>Due · {new Date(assignment.dueDate).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span></div>
+                ))}
               </article>
             )
           })}

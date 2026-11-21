@@ -5,6 +5,8 @@ import { CoursesPage } from './features/courses/CoursesPage'
 import { SettingsPage } from './features/settings/SettingsPage'
 import { TodayPage } from './features/schedule/TodayPage'
 import { WeekPage } from './features/schedule/WeekPage'
+import { AssignmentsPage } from './features/assignments/AssignmentsPage'
+import { ExamsPage } from './features/exams/ExamsPage'
 import { ensureDatabaseReady } from './db/database'
 import { registerPwaServiceWorker } from './services/pwa'
 import { useThemeStore } from './store/themeStore'
@@ -126,6 +128,8 @@ function AppShell() {
           <Route index element={<TodayPage />} />
           <Route path="/week" element={<WeekPage />} />
           <Route path="/courses" element={<CoursesPage />} />
+          <Route path="/assignments" element={<AssignmentsPage />} />
+          <Route path="/exams" element={<ExamsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Routes>

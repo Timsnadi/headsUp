@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 
 const tabs = [
@@ -54,6 +54,8 @@ function TabIcon({ name }: { name: string }) {
 }
 
 export function TabLayout() {
+  const [addOpen, setAddOpen] = useState(false)
+
   return (
     <div className="app-shell">
       <header className="top-bar">
@@ -71,7 +73,27 @@ export function TabLayout() {
       </main>
 
       <nav className="tab-bar" aria-label="Main navigation">
-        {tabs.map(({ label, to, icon }) => (
+        {tabs.slice(0, 2).map(({ label, to, icon }) => (
+          <NavLink
+            key={label}
+            to={to}
+            end={to === '/'}
+            className={({ isActive }) => (isActive ? 'tab active' : 'tab')}
+          >
+            <TabIcon name={icon} />
+            <span>{label}</span>
+          </NavLink>
+        ))}
+        <button
+          type="button"
+          className="tab tab-add"
+          aria-label="Add data"
+          onClick={() => setAddOpen(true)}
+        >
+          <span className="tab-add-icon" aria-hidden="true">+</span>
+          <span>Add</span>
+        </button>
+        {tabs.slice(2).map(({ label, to, icon }) => (
           <NavLink
             key={label}
             to={to}
@@ -83,6 +105,27 @@ export function TabLayout() {
           </NavLink>
         ))}
       </nav>
+      {addOpen ? (
+        <div className="sheet-backdrop" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setAddOpen(false)
+        }}>
+          <section className="bottom-sheet add-sheet" role="dialog" aria-modal="true" aria-labelledby="add-title">
+            <div className="sheet-handle" aria-hidden="true" />
+            <div className="sheet-header">
+              <div>
+                <p className="eyebrow">Create</p>
+                <h2 id="add-title">Add new</h2>
+              </div>
+              <button type="button" className="icon-button close-button" onClick={() => setAddOpen(false)}>Close</button>
+            </div>
+            <div className="add-data-list">
+              <a href="/courses?new=1" onClick={() => setAddOpen(false)}><span>Course</span><strong>+</strong></a>
+              <a href="/assignments?new=1" onClick={() => setAddOpen(false)}><span>Assignment</span><strong>+</strong></a>
+              <a href="/exams?new=1" onClick={() => setAddOpen(false)}><span>Exam</span><strong>+</strong></a>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </div>
   )
 }

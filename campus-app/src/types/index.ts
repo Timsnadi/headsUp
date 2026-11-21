@@ -37,6 +37,7 @@ export type Assignment = {
   dueDate: string
   status: AssignmentStatus
   priority: 'low' | 'medium' | 'high'
+  notes?: string
   updatedAt: string
 }
 
