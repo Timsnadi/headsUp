@@ -4,10 +4,13 @@ A premium, offline-first class tracker for university life.
 
 ## Current functionality
 
-- Create, edit, and delete courses with meeting days, times, semester, and a custom color.
-- Track online courses with a joinable HTTP(S) meeting link, or in-person courses with a building and room.
-- View saved classes in Today and Monday-to-Sunday Week schedules.
-- Course data is stored locally in IndexedDB through Dexie.
+- Create, edit, and delete units and their lessons, with per-lesson days, times, modes, locations, and optional online links.
+- View lessons in Today and Monday-to-Sunday Week schedules using the Africa/Nairobi time zone.
+- Track assignments and exams, and export lessons and deadlines to a reminder-enabled iCalendar file.
+- Data stays on the device in IndexedDB through Dexie; no server or sample timetable is used.
+- Existing course data and older JSON backups are migrated to units and lessons without removing schedule or related records.
+
+Reminders appear only while the app is open. Use Add to Calendar for alerts when it's closed.
 
 ## Setup
 

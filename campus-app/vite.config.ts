@@ -1,9 +1,9 @@
-import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  root: process.cwd(),
   plugins: [
     react(),
     VitePWA({
@@ -34,8 +34,7 @@ export default defineConfig({
     }),
   ],
   test: {
-    environment: 'happy-dom',
+    environment: 'jsdom',
     globals: true,
-    setupFiles: [fileURLToPath(new URL('./tests/setup.ts', import.meta.url))],
   },
 })

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { TabLayout } from './app/TabLayout'
-import { CoursesPage } from './features/courses/CoursesPage'
+import { UnitsPage } from './features/units/UnitsPage'
 import { SettingsPage } from './features/settings/SettingsPage'
 import { TodayPage } from './features/schedule/TodayPage'
 import { WeekPage } from './features/schedule/WeekPage'
@@ -127,7 +127,7 @@ function AppShell() {
         <Route element={<TabLayout />}>
           <Route index element={<TodayPage />} />
           <Route path="/week" element={<WeekPage />} />
-          <Route path="/courses" element={<CoursesPage />} />
+          <Route path="/units" element={<UnitsPage />} />
           <Route path="/assignments" element={<AssignmentsPage />} />
           <Route path="/exams" element={<ExamsPage />} />
           <Route path="/settings" element={<SettingsPage />} />

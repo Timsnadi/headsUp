@@ -4,7 +4,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 const tabs = [
   { label: 'Today', to: '/', icon: 'today' },
   { label: 'Week', to: '/week', icon: 'week' },
-  { label: 'Courses', to: '/courses', icon: 'courses' },
+  { label: 'Units', to: '/units', icon: 'units' },
   { label: 'Settings', to: '/settings', icon: 'settings' },
 ]
 
@@ -22,7 +22,7 @@ function TabIcon({ name }: { name: string }) {
         <path d="M7.5 3.75v3M16.5 3.75v3M3.75 9.25h16.5M8 13h2M14 13h2M8 16.5h2" />
       </>
     ),
-    courses: (
+    units: (
       <>
         <path d="m3.5 7 8.5-4 8.5 4-8.5 4-8.5-4Z" />
         <path d="M6.5 9v5.5c0 1.7 2.45 3.25 5.5 3.25s5.5-1.55 5.5-3.25V9M20.5 7v7" />
@@ -119,7 +119,7 @@ export function TabLayout() {
               <button type="button" className="icon-button close-button" onClick={() => setAddOpen(false)}>Close</button>
             </div>
             <div className="add-data-list">
-              <a href="/courses?new=1" onClick={() => setAddOpen(false)}><span>Course</span><strong>+</strong></a>
+              <a href="/units?new=1" onClick={() => setAddOpen(false)}><span>Unit</span><strong>+</strong></a>
               <a href="/assignments?new=1" onClick={() => setAddOpen(false)}><span>Assignment</span><strong>+</strong></a>
               <a href="/exams?new=1" onClick={() => setAddOpen(false)}><span>Exam</span><strong>+</strong></a>
             </div>

@@ -1,37 +1,70 @@
-import type { Course, Weekday } from '../../types'
+import type { Lesson, Unit, Weekday } from '../../types'
 
-const weekdays: Weekday[] = [
-  'Sunday',
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-]
+export const NAIROBI_TIME_ZONE = 'Africa/Nairobi'
+
+export type ScheduledLesson = Lesson & { unit: Unit }
+
+export function getNairobiDateParts(date: Date): {
+  year: number
+  month: number
+  day: number
+  weekday: Weekday
+} {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: NAIROBI_TIME_ZONE,
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    weekday: 'long',
+  }).formatToParts(date)
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? ''
+  return {
+    year: Number(value('year')),
+    month: Number(value('month')),
+    day: Number(value('day')),
+    weekday: value('weekday') as Weekday,
+  }
+}
+
+export function getDateKey(date: Date): string {
+  const { year, month, day } = getNairobiDateParts(date)
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
 
 export function getWeekday(date: Date): Weekday {
-  return weekdays[date.getDay()]
+  return getNairobiDateParts(date).weekday
+}
+
+function dateFromKey(key: string): Date {
+  const [year, month, day] = key.split('-').map(Number)
+  return new Date(Date.UTC(year, month - 1, day))
 }
 
 export function getWeekDates(anchor: Date, weekOffset = 0): Date[] {
-  const firstDay = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate())
-  const mondayOffset = (firstDay.getDay() + 6) % 7
-  firstDay.setDate(firstDay.getDate() - mondayOffset + weekOffset * 7)
-
+  const firstDay = dateFromKey(getDateKey(anchor))
+  const mondayOffset = (firstDay.getUTCDay() + 6) % 7
+  firstDay.setUTCDate(firstDay.getUTCDate() - mondayOffset + weekOffset * 7)
   return Array.from({ length: 7 }, (_, index) => {
     const date = new Date(firstDay)
-    date.setDate(firstDay.getDate() + index)
+    date.setUTCDate(firstDay.getUTCDate() + index)
     return date
   })
 }
 
-export function getCoursesForDate(courses: Course[], date: Date): Course[] {
+export function getLessonsForDate(lessons: ScheduledLesson[], date: Date): ScheduledLesson[] {
   const weekday = getWeekday(date)
-
-  return courses
-    .filter((course) => course.meetingDays.includes(weekday))
+  return lessons
+    .filter((lesson) => lesson.day === weekday)
     .sort((left, right) => left.startTime.localeCompare(right.startTime))
+}
+
+export function getScheduledLessons(lessons: Lesson[], units: Unit[]): ScheduledLesson[] {
+  const unitsById = new Map(units.map((unit) => [unit.id, unit]))
+  return lessons.flatMap((lesson) => {
+    const unit = unitsById.get(lesson.unitId)
+    return unit ? [{ ...lesson, unit }] : []
+  })
 }
 
 export function formatMeetingTime(time: string): string {
@@ -45,19 +78,20 @@ export function formatMeetingTime(time: string): string {
   const minutes = Number(match[2])
 
   return new Intl.DateTimeFormat(undefined, {
+    timeZone: NAIROBI_TIME_ZONE,
     hour: 'numeric',
     minute: '2-digit',
-  }).format(new Date(2000, 0, 1, hours, minutes))
+  }).format(new Date(Date.UTC(2020, 0, 1, hours - 3, minutes)))
 }
 
 export function formatScheduleDate(date: Date, options: Intl.DateTimeFormatOptions): string {
-  return new Intl.DateTimeFormat(undefined, options).format(date)
+  return new Intl.DateTimeFormat(undefined, { ...options, timeZone: NAIROBI_TIME_ZONE }).format(date)
 }
 
 export function getSafeMeetingUrl(value: string): string | null {
   try {
     const url = new URL(value)
-    return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null
+    return url.protocol === 'https:' ? url.href : null
   } catch {
     return null
   }

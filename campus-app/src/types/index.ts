@@ -1,4 +1,5 @@
-export type CourseMode = 'online' | 'in-person'
+export type LessonMode = 'physical' | 'online'
+export type LessonType = 'lecture' | 'tutorial' | 'lab' | 'other'
 
 export type Weekday =
   | 'Monday'
@@ -11,28 +12,37 @@ export type Weekday =
 
 export type ThemeMode = 'system' | 'light' | 'dark'
 
-export type Course = {
+export type Unit = {
   id: string
   name: string
   code: string
-  instructor: string
+  defaultLecturer?: string
   color: string
-  mode: CourseMode
-  building: string
-  room: string
-  meetingLink: string
-  meetingDays: Weekday[]
-  startTime: string
-  endTime: string
+  defaultMode: LessonMode
   semester: string
   updatedAt: string
+}
+
+export type Lesson = {
+  id: string
+  unitId: string
+  day: Weekday
+  startTime: string
+  endTime: string
+  label?: string
+  type: LessonType
+  mode: LessonMode
+  location: string
+  meetingLink: string
+  lecturer?: string
+  note?: string
 }
 
 export type AssignmentStatus = 'upcoming' | 'in-progress' | 'done' | 'overdue'
 
 export type Assignment = {
   id: string
-  courseId: string
+  unitId: string
   title: string
   dueDate: string
   status: AssignmentStatus
@@ -43,7 +53,7 @@ export type Assignment = {
 
 export type Exam = {
   id: string
-  courseId: string
+  unitId: string
   title: string
   date: string
   time: string
@@ -54,7 +64,7 @@ export type Exam = {
 
 export type GradeEntry = {
   id: string
-  courseId: string
+  unitId: string
   title: string
   score: number
   maxScore: number
@@ -64,7 +74,7 @@ export type GradeEntry = {
 
 export type Note = {
   id: string
-  courseId: string
+  unitId: string
   title: string
   body: string
   links: string[]

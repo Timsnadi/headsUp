@@ -2,14 +2,17 @@ import Dexie, { type Table } from 'dexie'
 import type {
   AppSetting,
   Assignment,
-  Course,
   Exam,
   GradeEntry,
+  Lesson,
   Note,
+  Unit,
 } from '../types'
+import { migrateLegacyUnitReference, migrateLegacyUnits } from './migrations'
 
 class CampusDatabase extends Dexie {
-  courses!: Table<Course, string>
+  courses!: Table<Unit, string>
+  lessons!: Table<Lesson, string>
   assignments!: Table<Assignment, string>
   exams!: Table<Exam, string>
   grades!: Table<GradeEntry, string>
@@ -69,6 +72,32 @@ class CampusDatabase extends Dexie {
             delete storedCourse.location
           }),
       )
+
+    this.version(3)
+      .stores({
+        courses: 'id, code, semester, defaultMode, updatedAt',
+        lessons: 'id, unitId, day, startTime, endTime',
+        assignments: 'id, unitId, dueDate, status, updatedAt',
+        exams: 'id, unitId, date, updatedAt',
+        grades: 'id, unitId, updatedAt',
+        notes: 'id, unitId, updatedAt',
+        appSettings: 'key, updatedAt',
+      })
+      .upgrade(async (transaction) => {
+        const courses = transaction.table('courses')
+        const legacyRecords = (await courses.toArray()) as Record<string, unknown>[]
+        const { units, lessons } = migrateLegacyUnits(legacyRecords)
+        await courses.clear()
+        await courses.bulkPut(units)
+        await transaction.table('lessons').bulkPut(lessons)
+        await Promise.all(
+          (['assignments', 'exams', 'grades', 'notes'] as const).map((tableName) =>
+            transaction.table(tableName).toCollection().modify((record: Record<string, unknown>) => {
+              migrateLegacyUnitReference(record)
+            }),
+          ),
+        )
+      })
   }
 }
 

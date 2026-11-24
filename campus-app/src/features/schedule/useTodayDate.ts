@@ -1,12 +1,18 @@
 import { useSyncExternalStore } from 'react'
+import { getDateKey } from './scheduleUtils'
 
-let currentDate = new Date()
+function todayInNairobi(): Date {
+  const [year, month, day] = getDateKey(new Date()).split('-').map(Number)
+  return new Date(Date.UTC(year, month - 1, day))
+}
+
+let currentDate = todayInNairobi()
 let timer: number | undefined
 const listeners = new Set<() => void>()
 
 function refreshDate() {
-  const nextDate = new Date()
-  if (nextDate.toDateString() !== currentDate.toDateString()) {
+  const nextDate = todayInNairobi()
+  if (getDateKey(nextDate) !== getDateKey(currentDate)) {
     currentDate = nextDate
     listeners.forEach((listener) => listener())
   }

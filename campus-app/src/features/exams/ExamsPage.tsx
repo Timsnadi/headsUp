@@ -1,12 +1,12 @@
 import { useEffect, useState, type CSSProperties, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { courseRepository, examRepository } from '../../db/repositories'
-import type { Course, Exam } from '../../types'
+import { unitRepository, examRepository } from '../../db/repositories'
+import type { Unit, Exam } from '../../types'
 
 type ExamValues = Omit<Exam, 'id' | 'updatedAt'>
 
 const emptyValues = (): ExamValues => ({
-  courseId: '',
+  unitId: '',
   title: '',
   date: '',
   time: '09:00',
@@ -16,7 +16,7 @@ const emptyValues = (): ExamValues => ({
 
 export function ExamsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const [courses, setCourses] = useState<Course[]>([])
+  const [units, setUnits] = useState<Unit[]>([])
   const [exams, setExams] = useState<Exam[]>([])
   const [formOpen, setFormOpen] = useState(searchParams.get('new') === '1')
   const [editing, setEditing] = useState<Exam | null>(null)
@@ -26,9 +26,9 @@ export function ExamsPage() {
   const [undoExam, setUndoExam] = useState<Exam | null>(null)
 
   useEffect(() => {
-    void Promise.all([courseRepository.list(), examRepository.list()])
-      .then(([savedCourses, savedExams]) => {
-        setCourses(savedCourses)
+    void Promise.all([unitRepository.list(), examRepository.list()])
+      .then(([savedUnits, savedExams]) => {
+        setUnits(savedUnits)
         setExams(savedExams)
       })
       .catch(() => setError('Your exams could not be loaded.'))
@@ -43,8 +43,8 @@ export function ExamsPage() {
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!values.courseId || !values.title.trim() || !values.date) {
-      setError('Add a title, course, and date.')
+    if (!values.unitId || !values.title.trim() || !values.date) {
+      setError('Add a title, unit, and date.')
       return
     }
     const exam: Exam = {
@@ -77,7 +77,7 @@ export function ExamsPage() {
   const edit = (exam: Exam) => {
     setEditing(exam)
     setValues({
-      courseId: exam.courseId,
+      unitId: exam.unitId,
       title: exam.title,
       date: exam.date,
       time: exam.time,
@@ -96,11 +96,11 @@ export function ExamsPage() {
       ) : (
         <div className="inset-list">
           {exams.map((exam) => {
-            const course = courses.find((entry) => entry.id === exam.courseId)
+            const unit = units.find((entry) => entry.id === exam.unitId)
             return (
-              <article className="assignment-row" style={{ '--course-color': course?.color ?? '#777' } as CSSProperties} key={exam.id}>
-                <div className="exam-date"><strong>{new Date(`${exam.date}T${exam.time}`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</strong><span>{exam.time}</span></div>
-                <div className="assignment-copy"><strong>{exam.title}</strong><span>{course?.code || 'No course'} · {exam.location || 'Location not set'} · {exam.weight}%</span></div>
+              <article className="assignment-row" style={{ '--course-color': unit?.color ?? '#777' } as CSSProperties} key={exam.id}>
+                <div className="exam-date"><strong>{new Intl.DateTimeFormat(undefined, { timeZone: 'Africa/Nairobi', month: 'short', day: 'numeric' }).format(new Date(`${exam.date}T${exam.time}:00+03:00`))}</strong><span>{exam.time}</span></div>
+                <div className="assignment-copy"><strong>{exam.title}</strong><span>{unit?.code || 'No unit'} · {exam.location || 'Location not set'} · {exam.weight}%</span></div>
                 <button type="button" className="icon-button" onClick={() => edit(exam)}>Edit</button>
                 <button type="button" className="icon-button danger-button" onClick={() => void remove(exam)}>Delete</button>
               </article>
@@ -114,7 +114,7 @@ export function ExamsPage() {
             <div className="sheet-handle" /><div className="sheet-header"><div><p className="eyebrow">{editing ? 'Update exam' : 'New exam'}</p><h2 id="exam-form-title">{editing ? 'Edit exam' : 'Add exam'}</h2></div><button type="button" className="icon-button close-button" onClick={close}>Close</button></div>
             <form className="course-form" onSubmit={(event) => void submit(event)}>
               <label className="form-field">Title<input required value={values.title} onChange={(event) => setValues({ ...values, title: event.target.value })} /></label>
-              <label className="form-field">Course<select required value={values.courseId} onChange={(event) => setValues({ ...values, courseId: event.target.value })}><option value="">Choose a course</option>{courses.map((course) => <option value={course.id} key={course.id}>{course.code} — {course.name}</option>)}</select></label>
+              <label className="form-field">Unit<select required value={values.unitId} onChange={(event) => setValues({ ...values, unitId: event.target.value })}><option value="">Choose a unit</option>{units.map((unit) => <option value={unit.id} key={unit.id}>{unit.code} — {unit.name}</option>)}</select></label>
               <div className="form-grid"><label className="form-field">Date<input type="date" required value={values.date} onChange={(event) => setValues({ ...values, date: event.target.value })} /></label><label className="form-field">Time<input type="time" required value={values.time} onChange={(event) => setValues({ ...values, time: event.target.value })} /></label></div>
               <div className="form-grid"><label className="form-field">Location<input value={values.location} onChange={(event) => setValues({ ...values, location: event.target.value })} /></label><label className="form-field">Weight (%)<input type="number" min="0" max="100" step="0.1" required value={values.weight} onChange={(event) => setValues({ ...values, weight: Number(event.target.value) })} /></label></div>
               <div className="sheet-actions"><button type="button" className="secondary-button" onClick={close}>Cancel</button><button type="submit" className="primary-button">{editing ? 'Save changes' : 'Add exam'}</button></div>

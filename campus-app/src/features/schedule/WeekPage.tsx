@@ -1,25 +1,30 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import {
+  assignmentRepository,
+  examRepository,
+  lessonRepository,
+} from '../../db/repositories'
+import type { Assignment, Exam } from '../../types'
+import {
   formatMeetingTime,
   formatScheduleDate,
-  getCoursesForDate,
+  getDateKey,
+  getLessonsForDate,
+  getSafeMeetingUrl,
   getWeekDates,
 } from './scheduleUtils'
+import { useScheduleUnits } from './useScheduleUnits'
 import { useTodayDate } from './useTodayDate'
-import { useScheduleCourses } from './useScheduleCourses'
-import { assignmentRepository, examRepository } from '../../db/repositories'
-import type { Assignment, Exam } from '../../types'
 
-function localDateKey(date: Date): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
+function durationHours(start: string, end: string): number {
+  const [startHour, startMinute] = start.split(':').map(Number)
+  const [endHour, endMinute] = end.split(':').map(Number)
+  return (endHour * 60 + endMinute - startHour * 60 - startMinute) / 60
 }
 
 export function WeekPage() {
   const [weekOffset, setWeekOffset] = useState(0)
-  const { courses, loading, error } = useScheduleCourses()
+  const { lessons, loading, error, reload } = useScheduleUnits()
   const today = useTodayDate()
   const dates = getWeekDates(today, weekOffset)
   const weekLabel = `${formatScheduleDate(dates[0], { month: 'short', day: 'numeric' })} – ${formatScheduleDate(dates[6], {
@@ -29,6 +34,7 @@ export function WeekPage() {
   })}`
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [exams, setExams] = useState<Exam[]>([])
+  const [actionError, setActionError] = useState('')
 
   useEffect(() => {
     void Promise.all([assignmentRepository.list(), examRepository.list()])
@@ -36,7 +42,25 @@ export function WeekPage() {
         setAssignments(savedAssignments)
         setExams(savedExams)
       })
+      .catch(() => setActionError('Your assignments and exams could not be loaded.'))
   }, [])
+
+  const addMeetingLink = async (lessonId: string) => {
+    const value = window.prompt('Enter an HTTPS meeting link')
+    if (!value) return
+    try {
+      const url = new URL(value.trim())
+      if (url.protocol !== 'https:') throw new Error('Use an HTTPS link.')
+      const savedLessons = await lessonRepository.list()
+      const target = savedLessons.find((item) => item.id === lessonId)
+      if (!target) throw new Error('This lesson could not be found.')
+      await lessonRepository.put({ ...target, meetingLink: url.href })
+      await reload()
+      setActionError('')
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'The meeting link could not be saved.')
+    }
+  }
 
   return (
     <section className="page-panel">
@@ -47,26 +71,11 @@ export function WeekPage() {
           <p className="week-range">{weekLabel}</p>
         </div>
         <div className="week-controls" aria-label="Choose week">
-          <button
-            type="button"
-            className="icon-button week-nav-button"
-            aria-label="Previous week"
-            onClick={() => setWeekOffset((offset) => offset - 1)}
-          >
-            ‹
-          </button>
-          <button
-            type="button"
-            className="icon-button week-nav-button"
-            aria-label="Next week"
-            onClick={() => setWeekOffset((offset) => offset + 1)}
-          >
-            ›
-          </button>
+          <button type="button" className="icon-button week-nav-button" aria-label="Previous week" onClick={() => setWeekOffset((offset) => offset - 1)}>‹</button>
+          <button type="button" className="icon-button week-nav-button" aria-label="Next week" onClick={() => setWeekOffset((offset) => offset + 1)}>›</button>
         </div>
       </div>
-
-      {error ? <div className="feedback-card error-card" role="alert">{error}</div> : null}
+      {error || actionError ? <div className="feedback-card error-card" role="alert">{error || actionError}</div> : null}
       {loading ? (
         <div className="week-grid" aria-label="Loading weekly schedule" aria-busy="true">
           {dates.map((date) => <div className="skeleton-card" key={date.toISOString()} />)}
@@ -74,42 +83,51 @@ export function WeekPage() {
       ) : (
         <div className="week-grid">
           {dates.map((date) => {
-            const dayCourses = getCoursesForDate(courses, date)
-            const isToday = date.toDateString() === today.toDateString()
-            const dateKey = localDateKey(date)
+            const dayLessons = getLessonsForDate(lessons, date)
+            const dateKey = getDateKey(date)
+            const isToday = dateKey === getDateKey(today)
             const dayAssignments = assignments.filter((item) =>
-              item.status !== 'done' && localDateKey(new Date(item.dueDate)) === dateKey,
+              item.status !== 'done' && getDateKey(new Date(item.dueDate)) === dateKey,
             )
             const dayExams = exams.filter((item) => item.date === dateKey)
-
             return (
-              <article className={isToday ? 'week-card today-card' : 'week-card'} key={date.toISOString()}>
+              <article className={isToday ? 'week-card today-card' : 'week-card'} key={dateKey}>
                 <div className="week-card-heading">
                   <h2>{formatScheduleDate(date, { weekday: 'short' })}</h2>
                   <time>{formatScheduleDate(date, { month: 'short', day: 'numeric' })}</time>
                 </div>
-                {dayCourses.length > 0 ? (
+                {dayLessons.length > 0 ? (
                   <div className="week-meetings">
-                    {dayCourses.map((course) => (
-                      <div
-                        className="week-meeting"
-                        key={course.id}
-                        style={{ '--course-color': course.color } as CSSProperties}
-                      >
-                        <time>{formatMeetingTime(course.startTime)}</time>
-                        <strong>{course.name}</strong>
-                        <span>{course.code}</span>
-                      </div>
-                    ))}
+                    {dayLessons.map((lesson) => {
+                      const height = `${Math.max(3, durationHours(lesson.startTime, lesson.endTime) * 3)}rem`
+                      return (
+                        <div
+                          className="week-meeting"
+                          key={lesson.id}
+                          style={{ '--course-color': lesson.unit.color, minHeight: height } as CSSProperties}
+                        >
+                          <time>{formatMeetingTime(lesson.startTime)}–{formatMeetingTime(lesson.endTime)}</time>
+                          <strong>{lesson.unit.name}{lesson.label ? ` · ${lesson.label}` : ''}</strong>
+                          <span>{lesson.unit.code} · {lesson.type}</span>
+                          {lesson.lecturer || lesson.unit.defaultLecturer ? <span>{lesson.lecturer || lesson.unit.defaultLecturer}</span> : null}
+                          {lesson.mode === 'physical' ? <span>{lesson.location}</span> : null}
+                          {lesson.mode === 'online' ? (
+                            getSafeMeetingUrl(lesson.meetingLink) ? (
+                              <a className="join-button" href={getSafeMeetingUrl(lesson.meetingLink) ?? undefined} target="_blank" rel="noreferrer">Join</a>
+                            ) : (
+                              <div className="online-actions"><span className="course-mode">Online</span><button type="button" className="text-button" onClick={() => void addMeetingLink(lesson.id)}>Add link</button></div>
+                            )
+                          ) : null}
+                        </div>
+                      )
+                    })}
                   </div>
-                ) : (
-                  <p className="week-no-classes">Nothing scheduled</p>
-                )}
+                ) : <p className="week-no-classes">Nothing scheduled</p>}
                 {dayExams.map((exam) => (
                   <div className="week-extra exam-extra" key={exam.id}><strong>Exam: {exam.title}</strong><span>{exam.time}</span></div>
                 ))}
                 {dayAssignments.map((assignment) => (
-                  <div className="week-extra assignment-extra" key={assignment.id}><strong>{assignment.title}</strong><span>Due · {new Date(assignment.dueDate).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span></div>
+                  <div className="week-extra assignment-extra" key={assignment.id}><strong>{assignment.title}</strong><span>Due · {new Intl.DateTimeFormat([], { timeZone: 'Africa/Nairobi', hour: 'numeric', minute: '2-digit' }).format(new Date(assignment.dueDate))}</span></div>
                 ))}
               </article>
             )

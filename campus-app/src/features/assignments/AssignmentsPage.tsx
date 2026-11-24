@@ -1,12 +1,12 @@
 import { useEffect, useState, type CSSProperties, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { assignmentRepository, courseRepository } from '../../db/repositories'
-import type { Assignment, AssignmentStatus, Course } from '../../types'
+import { assignmentRepository, unitRepository } from '../../db/repositories'
+import type { Assignment, AssignmentStatus, Unit } from '../../types'
 
 type Filter = 'Upcoming' | 'Overdue' | 'Completed'
 type FormValues = {
   title: string
-  courseId: string
+  unitId: string
   dueDate: string
   priority: Assignment['priority']
   status: AssignmentStatus
@@ -15,7 +15,7 @@ type FormValues = {
 
 const emptyValues: FormValues = {
   title: '',
-  courseId: '',
+  unitId: '',
   dueDate: '',
   priority: 'medium',
   status: 'upcoming',
@@ -32,7 +32,7 @@ function dateTimeInput(value: string): string {
 export function AssignmentsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [assignments, setAssignments] = useState<Assignment[]>([])
-  const [courses, setCourses] = useState<Course[]>([])
+  const [units, setUnits] = useState<Unit[]>([])
   const [filter, setFilter] = useState<Filter>('Upcoming')
   const [editing, setEditing] = useState<Assignment | null>(null)
   const [formOpen, setFormOpen] = useState(searchParams.get('new') === '1')
@@ -43,11 +43,11 @@ export function AssignmentsPage() {
 
   useEffect(() => {
     let active = true
-    void Promise.all([assignmentRepository.list(), courseRepository.list()])
-      .then(([savedAssignments, savedCourses]) => {
+    void Promise.all([assignmentRepository.list(), unitRepository.list()])
+      .then(([savedAssignments, savedUnits]) => {
         if (active) {
           setAssignments(savedAssignments)
-          setCourses(savedCourses)
+          setUnits(savedUnits)
         }
       })
       .catch(() => active && setError('Your assignments could not be loaded.'))
@@ -64,7 +64,7 @@ export function AssignmentsPage() {
     setEditing(item)
     setValues({
       title: item.title,
-      courseId: item.courseId,
+      unitId: item.unitId,
       dueDate: dateTimeInput(item.dueDate),
       priority: item.priority,
       status: item.status,
@@ -82,13 +82,13 @@ export function AssignmentsPage() {
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!values.courseId || !values.title.trim() || !values.dueDate) {
-      setError('Add a title, course, and due date.')
+    if (!values.unitId || !values.title.trim() || !values.dueDate) {
+      setError('Add a title, unit, and due date.')
       return
     }
     const item: Assignment = {
       id: editing?.id ?? crypto.randomUUID(),
-      courseId: values.courseId,
+      unitId: values.unitId,
       title: values.title.trim(),
       dueDate: new Date(values.dueDate).toISOString(),
       priority: values.priority,
@@ -131,7 +131,12 @@ export function AssignmentsPage() {
   }).sort((a, b) => a.dueDate.localeCompare(b.dueDate))
 
   const groups = visible.reduce<Record<string, Assignment[]>>((result, item) => {
-    const key = new Date(item.dueDate).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })
+    const key = new Intl.DateTimeFormat(undefined, {
+      timeZone: 'Africa/Nairobi',
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric',
+    }).format(new Date(item.dueDate))
     ;(result[key] ??= []).push(item)
     return result
   }, {})
@@ -156,14 +161,14 @@ export function AssignmentsPage() {
             <section className="date-group" key={date}>
               <h2>{date}</h2>
               {items.map((item) => {
-                const course = courses.find((entry) => entry.id === item.courseId)
+                const unit = units.find((entry) => entry.id === item.unitId)
                 const due = new Date(item.dueDate).getTime()
                 const overdue = item.status !== 'done' && due < now
                 const soon = item.status !== 'done' && !overdue && due - now <= 48 * 60 * 60 * 1000
                 return (
-                  <article className="assignment-row" style={{ '--course-color': course?.color ?? '#777' } as CSSProperties} key={item.id}>
+                  <article className="assignment-row" style={{ '--course-color': unit?.color ?? '#777' } as CSSProperties} key={item.id}>
                     <button type="button" className={item.status === 'done' ? 'complete-check checked' : 'complete-check'} aria-label={`Mark ${item.title} complete`} onClick={() => void complete(item)}>{item.status === 'done' ? '✓' : ''}</button>
-                    <div className="assignment-copy"><strong>{item.title}</strong><span>{course?.code || 'No course'} · {new Date(item.dueDate).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>{soon ? <em className="due-soon">Due soon</em> : overdue ? <em className="overdue">Overdue</em> : null}</div>
+                    <div className="assignment-copy"><strong>{item.title}</strong><span>{unit?.code || 'No unit'} · {new Intl.DateTimeFormat([], { timeZone: 'Africa/Nairobi', hour: 'numeric', minute: '2-digit' }).format(new Date(item.dueDate))}</span>{soon ? <em className="due-soon">Due soon</em> : overdue ? <em className="overdue">Overdue</em> : null}</div>
                     <button type="button" className="icon-button" onClick={() => openEdit(item)}>Edit</button>
                     <button type="button" className="icon-button danger-button" onClick={() => void remove(item)}>Delete</button>
                   </article>
@@ -180,7 +185,7 @@ export function AssignmentsPage() {
             <div className="sheet-header"><div><p className="eyebrow">{editing ? 'Update work' : 'New work'}</p><h2 id="assignment-form-title">{editing ? 'Edit assignment' : 'Add assignment'}</h2></div><button type="button" className="icon-button close-button" onClick={closeForm}>Close</button></div>
             <form className="course-form" onSubmit={(event) => void submit(event)}>
               <label className="form-field">Title<input required value={values.title} onChange={(event) => setValues({ ...values, title: event.target.value })} /></label>
-              <label className="form-field">Course<select required value={values.courseId} onChange={(event) => setValues({ ...values, courseId: event.target.value })}><option value="">Choose a course</option>{courses.map((course) => <option value={course.id} key={course.id}>{course.code} — {course.name}</option>)}</select></label>
+              <label className="form-field">Unit<select required value={values.unitId} onChange={(event) => setValues({ ...values, unitId: event.target.value })}><option value="">Choose a unit</option>{units.map((unit) => <option value={unit.id} key={unit.id}>{unit.code} — {unit.name}</option>)}</select></label>
               <div className="form-grid"><label className="form-field">Due date and time<input type="datetime-local" required value={values.dueDate} onChange={(event) => setValues({ ...values, dueDate: event.target.value })} /></label><label className="form-field">Priority<select value={values.priority} onChange={(event) => setValues({ ...values, priority: event.target.value as Assignment['priority'] })}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></label></div>
               <label className="form-field">Status<select value={values.status} onChange={(event) => setValues({ ...values, status: event.target.value as AssignmentStatus })}><option value="upcoming">Upcoming</option><option value="in-progress">In progress</option><option value="done">Completed</option></select></label>
               <label className="form-field">Notes<textarea rows={3} value={values.notes} onChange={(event) => setValues({ ...values, notes: event.target.value })} /></label>
